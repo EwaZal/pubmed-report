@@ -1,0 +1,70 @@
+---
+title: "pubmed_report.Rmd"
+author: "Ewa"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rentrez)
+library(dplyr)
+library(stringr)
+library(tibble)
+library(lubridate)
+
+
+# Dane wejściowe
+entrez_email <- "twoj@email.com"  # Wpisz swój adres email
+set_entrez_email(entrez_email)
+
+zapytanie <- "Bethesda IV"
+typy_pub <- c("Original research", "Review")
+rok_od <- 2010
+rok_do <- 2025
+ile_artykulow <- 20
+
+pobierz_pubmed_z_filtrowaniem <- function(zapytanie, typy, od_rok, do_rok, liczba) {
+  typ_filter <- paste0(typy, "[Publication Type]", collapse = " OR ")
+  date_filter <- paste0(od_rok, "/", "01", "/", "01", ":", do_rok, "/", "12", "/", "31", "[PDAT]")
+  zapytanie_koncowe <- paste0("(", zapytanie, ") AND (", typ_filter, ") AND (", date_filter, ")")
+
+  wyniki <- entrez_search(db = "pubmed", term = zapytanie_koncowe, retmax = liczba)
+  if (length(wyniki$ids) == 0) return(tibble(PMID = NA, Tytul = "Brak wyników", Abstrakt = NA, Rok = NA, Typ = NA))
+
+  szczegoly <- entrez_summary(db = "pubmed", id = wyniki$ids)
+  abstrakty <- entrez_fetch(db = "pubmed", id = wyniki$ids, rettype = "abstract", retmode = "text")
+  abstrakty_lista <- str_split(abstrakty, "\\n\\n")[[1]]
+
+  tibble(
+    PMID = wyniki$ids,
+    Tytul = sapply(szczegoly, function(x) x$title),
+    Rok = sapply(szczegoly, function(x) year(as.Date(x$pubdate))),
+    Typ = sapply(szczegoly, function(x) paste(x$pubtype, collapse = ", ")),
+    Abstrakt = abstrakty_lista[1:length(wyniki$ids)]
+  )
+}
+
+wyniki_filtrowane <- pobierz_pubmed_z_filtrowaniem(zapytanie, typy_pub, rok_od, rok_do, ile_artykulow)
+
+
+knitr::kable(wyniki_filtrowane[, c("PMID", "Rok", "Typ", "Tytul")], caption = "Lista artykułów")
+
+for (i in 1:nrow(wyniki_filtrowane)) {
+  cat(paste0("### ", i, ". ", wyniki_filtrowane$Tytul[i], " (", wyniki_filtrowane$Rok[i], ")  
+**PMID:** ", wyniki_filtrowane$PMID[i], "  
+**Typ:** ", wyniki_filtrowane$Typ[i], "  
+
+", wyniki_filtrowane$Abstrakt[i], "\n\n---\n\n"))
+}
+
+rmarkdown::render("pubmed_report.Rmd", output_format = "pdf_document")
+
