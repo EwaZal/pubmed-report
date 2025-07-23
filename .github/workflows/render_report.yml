@@ -10,23 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Setup R
+      - name: Set up R
         uses: r-lib/actions/setup-r@v2
 
-      - name: Install packages
+      - name: Install R packages
         run: |
           Rscript -e 'install.packages(c("rmarkdown", "rentrez", "dplyr", "stringr", "tibble", "lubridate"))'
 
-      - name: Render RMarkdown
+      - name: Render RMarkdown to HTML
         run: |
           Rscript -e 'rmarkdown::render("pubmed_report.Rmd", output_format = "html_document")'
 
-      - name: Commit report
+      - name: Commit and push report
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
+          git pull --rebase
           git add *.html
-          git commit -m 'Automatyczna aktualizacja raportu'
+          git commit -m "Automatyczna aktualizacja raportu" || echo "Brak zmian"
           git push
