@@ -90,3 +90,7 @@ for (i in 1:nrow(wyniki_filtrowane)) {
 ", wyniki_filtrowane$Abstrakt[i], "\n\n---\n\n"))
 }
 ```
+
+```{r export-csv, include=FALSE}
+write.csv(wyniki_filtrowane, file = "wyniki_pubmed.csv", row.names = FALSE, fileEncoding = "UTF-8")
+```
