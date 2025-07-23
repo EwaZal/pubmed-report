@@ -35,28 +35,49 @@ pobierz_pubmed_z_filtrowaniem <- function(zapytanie, typy, od_rok, do_rok, liczb
   date_filter <- paste0(od_rok, "/", "01", "/", "01", ":", do_rok, "/", "12", "/", "31", "[PDAT]")
   zapytanie_koncowe <- paste0("(", zapytanie, ") AND (", typ_filter, ") AND (", date_filter, ")")
 
-  wyniki <- entrez_search(db = "pubmed", term = zapytanie_koncowe, retmax = liczba, email = email)
-  if (length(wyniki$ids) == 0) return(tibble(PMID = NA, Tytul = "Brak wyników", Abstrakt = NA, Rok = NA, Typ = NA))
+ wyniki <- entrez_search(
+  db = "pubmed", 
+  term = zapytanie_koncowe, 
+  retmax = liczba, 
+  email = email,
+  config = httr::user_agent(email)
+)
+Sys.sleep(0.4)
 
-  szczegoly <- entrez_summary(db = "pubmed", id = wyniki$ids, email = email)
-  abstrakty <- entrez_fetch(db = "pubmed", id = wyniki$ids, rettype = "abstract", retmode = "text", email = email)
-  abstrakty_lista <- str_split(abstrakty, "\\n\\n")[[1]]
-  liczba_abstraktow <- min(length(wyniki$ids), length(abstrakty_lista))
+szczegoly <- entrez_summary(
+  db = "pubmed", 
+  id = wyniki$ids, 
+  email = email,
+  config = httr::user_agent(email)
+)
+Sys.sleep(0.4)
 
-  tibble(
-    PMID = wyniki$ids[1:liczba_abstraktow],
-    Tytul = sapply(szczegoly[1:liczba_abstraktow], function(x) x$title),
-    Rok = sapply(szczegoly[1:liczba_abstraktow], function(x) {
-      pubdate <- x$pubdate
-      if (!is.null(pubdate) && grepl("^\\d{4}", pubdate)) {
-        as.integer(substr(pubdate, 1, 4))
-      } else {
-        NA_integer_
-      }
-    }),
-    Typ = sapply(szczegoly[1:liczba_abstraktow], function(x) paste(x$pubtype, collapse = ", ")),
-    Abstrakt = abstrakty_lista[1:liczba_abstraktow]
-  )
+abstrakty <- entrez_fetch(
+  db = "pubmed", 
+  id = wyniki$ids, 
+  rettype = "abstract", 
+  retmode = "text", 
+  email = email,
+  config = httr::user_agent(email)
+)
+
+abstrakty_lista <- str_split(abstrakty, "\\n\\n")[[1]]
+liczba_abstraktow <- min(length(wyniki$ids), length(abstrakty_lista))
+
+tibble(
+  PMID = wyniki$ids[1:liczba_abstraktow],
+  Tytul = sapply(szczegoly[1:liczba_abstraktow], function(x) x$title),
+  Rok = sapply(szczegoly[1:liczba_abstraktow], function(x) {
+    pubdate <- x$pubdate
+    if (!is.null(pubdate) && grepl("^\\d{4}", pubdate)) {
+      as.integer(substr(pubdate, 1, 4))
+    } else {
+      NA_integer_
+    }
+  }),
+  Typ = sapply(szczegoly[1:liczba_abstraktow], function(x) paste(x$pubtype, collapse = ", ")),
+  Abstrakt = abstrakty_lista[1:liczba_abstraktow]
+)
 }
 
 # Wywołanie funkcji
