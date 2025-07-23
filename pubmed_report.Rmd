@@ -23,7 +23,7 @@ library(lubridate)
 
 
 # Dane wejściowe
-entrez_email <- "twoj@email.com"  # Wpisz swój adres email
+entrez_email <- "ewa.zalewska.md@gmail.com"
 set_entrez_email(entrez_email)
 
 zapytanie <- "Bethesda IV"
