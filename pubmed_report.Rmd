@@ -1,5 +1,5 @@
 ---
-title: "pubmed_report.Rmd"
+title: "pubmed_report"
 author: "Ewa"
 date: "`r Sys.Date()`"
 output:
@@ -21,48 +21,60 @@ library(stringr)
 library(tibble)
 library(lubridate)
 
-
 # Dane wejściowe
 entrez_email <- "ewa.zalewska.md@gmail.com"
-set_entrez_email(entrez_email)
-
 zapytanie <- "Bethesda IV"
 typy_pub <- c("journal article")
 rok_od <- 2010
 rok_do <- 2025
 ile_artykulow <- 20
 
-pobierz_pubmed_z_filtrowaniem <- function(zapytanie, typy, od_rok, do_rok, liczba) {
+# Funkcja pobierająca dane z PubMed
+pobierz_pubmed_z_filtrowaniem <- function(zapytanie, typy, od_rok, do_rok, liczba, email) {
   typ_filter <- paste0(typy, "[Publication Type]", collapse = " OR ")
   date_filter <- paste0(od_rok, "/", "01", "/", "01", ":", do_rok, "/", "12", "/", "31", "[PDAT]")
   zapytanie_koncowe <- paste0("(", zapytanie, ") AND (", typ_filter, ") AND (", date_filter, ")")
 
-  wyniki <- entrez_search(db = "pubmed", term = zapytanie_koncowe, retmax = liczba)
+  wyniki <- entrez_search(db = "pubmed", term = zapytanie_koncowe, retmax = liczba, email = email)
   if (length(wyniki$ids) == 0) return(tibble(PMID = NA, Tytul = "Brak wyników", Abstrakt = NA, Rok = NA, Typ = NA))
 
-  szczegoly <- entrez_summary(db = "pubmed", id = wyniki$ids)
-  abstrakty <- entrez_fetch(db = "pubmed", id = wyniki$ids, rettype = "abstract", retmode = "text")
+  szczegoly <- entrez_summary(db = "pubmed", id = wyniki$ids, email = email)
+  abstrakty <- entrez_fetch(db = "pubmed", id = wyniki$ids, rettype = "abstract", retmode = "text", email = email)
   abstrakty_lista <- str_split(abstrakty, "\\n\\n")[[1]]
   liczba_abstraktow <- min(length(wyniki$ids), length(abstrakty_lista))
 
-tibble(
-  PMID = wyniki$ids[1:liczba_abstraktow],
-  Tytul = sapply(szczegoly[1:liczba_abstraktow], function(x) x$title),
-  Rok = sapply(szczegoly[1:liczba_abstraktow], function(x) year(as.Date(x$pubdate))),
-  Typ = sapply(szczegoly[1:liczba_abstraktow], function(x) paste(x$pubtype, collapse = ", ")),
-  Abstrakt = abstrakty_lista[1:liczba_abstraktow]
-)
-
+  tibble(
+    PMID = wyniki$ids[1:liczba_abstraktow],
+    Tytul = sapply(szczegoly[1:liczba_abstraktow], function(x) x$title),
+    Rok = sapply(szczegoly[1:liczba_abstraktow], function(x) year(as.Date(x$pubdate))),
+    Typ = sapply(szczegoly[1:liczba_abstraktow], function(x) paste(x$pubtype, collapse = ", ")),
+    Abstrakt = abstrakty_lista[1:liczba_abstraktow]
+  )
 }
 
-wyniki_filtrowane <- pobierz_pubmed_z_filtrowaniem(zapytanie, typy_pub, rok_od, rok_do, ile_artykulow)
+# Wywołanie funkcji
+wyniki_filtrowane <- pobierz_pubmed_z_filtrowaniem(
+  zapytanie,
+  typy_pub,
+  rok_od,
+  rok_do,
+  ile_artykulow,
+  email = entrez_email
+)
 ```
 
-```{r}
-knitr::kable(wyniki_filtrowane[, c("PMID", "Rok", "Typ", "Tytul")], caption = "Lista artykułów")
-```
+## 📋 Lista artykułów
 
 ```{r}
+knitr::kable(
+  wyniki_filtrowane[, c("PMID", "Rok", "Typ", "Tytul")],
+  caption = "Lista artykułów"
+)
+```
+
+## 📄 Abstrakty
+
+```{r, results='asis'}
 for (i in 1:nrow(wyniki_filtrowane)) {
   cat(paste0("### ", i, ". ", wyniki_filtrowane$Tytul[i], " (", wyniki_filtrowane$Rok[i], ")  
 **PMID:** ", wyniki_filtrowane$PMID[i], "  
