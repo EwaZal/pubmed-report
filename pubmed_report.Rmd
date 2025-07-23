@@ -67,4 +67,3 @@ for (i in 1:nrow(wyniki_filtrowane)) {
 }
 
 rmarkdown::render("pubmed_report.Rmd", output_format = "pdf_document")
-
