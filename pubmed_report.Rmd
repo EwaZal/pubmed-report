@@ -46,7 +46,14 @@ pobierz_pubmed_z_filtrowaniem <- function(zapytanie, typy, od_rok, do_rok, liczb
   tibble(
     PMID = wyniki$ids[1:liczba_abstraktow],
     Tytul = sapply(szczegoly[1:liczba_abstraktow], function(x) x$title),
-    Rok = sapply(szczegoly[1:liczba_abstraktow], function(x) year(as.Date(x$pubdate))),
+    Rok = sapply(szczegoly[1:liczba_abstraktow], function(x) {
+      pubdate <- x$pubdate
+      if (!is.null(pubdate) && grepl("^\\d{4}", pubdate)) {
+        as.integer(substr(pubdate, 1, 4))
+      } else {
+        NA_integer_
+      }
+    }),
     Typ = sapply(szczegoly[1:liczba_abstraktow], function(x) paste(x$pubtype, collapse = ", ")),
     Abstrakt = abstrakty_lista[1:liczba_abstraktow]
   )
