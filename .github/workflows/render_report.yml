@@ -1,0 +1,32 @@
+name: Render PubMed Report
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Co poniedziałek o 6:00 UTC
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install packages
+        run: |
+          Rscript -e 'install.packages(c("rmarkdown", "rentrez", "dplyr", "stringr", "tibble", "lubridate"))'
+
+      - name: Render RMarkdown
+        run: |
+          Rscript -e 'rmarkdown::render("pubmed_report.Rmd", output_format = "html_document")'
+
+      - name: Commit report
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add *.html
+          git commit -m 'Automatyczna aktualizacja raportu'
+          git push
